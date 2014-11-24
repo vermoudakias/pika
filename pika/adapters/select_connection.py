@@ -51,7 +51,7 @@ class SelectConnection(BaseConnection):
         self._manage_event_state()
 
         # Force our poller to come up for air
-        self.ioloop.poller.poll()
+        self.ioloop.poller.poll(WRITE|ERROR)
 
 
 class IOLoop(object):
@@ -198,15 +198,15 @@ class SelectPoller(object):
             # Process our timeouts
             self.process_timeouts()
 
-    def poll(self):
+    def poll(self, flags=READ|WRITE|ERROR):
         # Build our values to pass into select
         input_fileno, output_fileno, error_fileno = [], [], []
 
-        if self.events & READ:
+        if self.events & READ and flags & READ:
             input_fileno = [self.fileno]
-        if self.events & WRITE:
+        if self.events & WRITE and flags & WRITE:
             output_fileno = [self.fileno]
-        if self.events & ERROR:
+        if self.events & ERROR and flags & ERROR:
             error_fileno = [self.fileno]
 
         # Wait on select to let us know what's up
