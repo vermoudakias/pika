@@ -146,6 +146,12 @@ class SelectPoller(object):
         self.open = True
         self._handler = handler
         self._timeouts = dict()
+        self.ntf_fd = None
+        self.ntf_handler = None
+
+    def set_ntf_handler(self, ntf_fd, handler):
+        self.ntf_fd = ntf_fd
+        self.ntf_handler = handler
 
     def update_handler(self, fileno, events):
         """
@@ -209,6 +215,9 @@ class SelectPoller(object):
         if self.events & ERROR and flags & ERROR:
             error_fileno = [self.fileno]
 
+        if self.ntf_fd is not None:
+            input_fileno.append(self.ntf_fd)
+
         # Wait on select to let us know what's up
         try:
             read, write, error = select.select(input_fileno,
@@ -219,6 +228,9 @@ class SelectPoller(object):
             return self._handler(self.fileno, ERROR, error)
 
         # Build our events bit mask
+        if self.ntf_fd is not None and self.ntf_fd in read:
+            read.remove(self.ntf_fd)
+            self.ntf_handler()
         events = 0
         if read:
             events |= READ
